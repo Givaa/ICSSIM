@@ -1,12 +1,10 @@
 #FROM kalilinux/kali-rolling
-#FROM ubuntu:20.04
-FROM nvidia/cuda:12.3.2-base-ubuntu20.04
-#FROM tensorflow/tensorflow:latest-gpu
-#FROM stablebaselines/stable-baselines3
+FROM ubuntu:20.04
 
 RUN mkdir src
 
 COPY ./src/ ./src/
+
 
 RUN apt-get update
 
@@ -30,10 +28,9 @@ RUN apt-get update \
 && pip install paho-mqtt \
 && pip install gymnasium \
 && pip install tensorflow \
+&& pip install keras \
 && pip install stable-baselines3 \
-&& pip install torchrl \
-&& pip install tqdm \
-&& pip install dowhy
+&& pip install stable-baselines3[extra]
 
 WORKDIR /src
 
