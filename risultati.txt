@@ -1,0 +1,91 @@
+a2c - 1500
+------------------------------------
+| rollout/              |          |
+|    ep_len_mean        | 3.28     |
+|    ep_rew_mean        | 7.42     |
+| time/                 |          |
+|    fps                | 0        |
+|    iterations         | 300      |
+|    time_elapsed       | 60195    |
+|    total_timesteps    | 1500     |
+| train/                |          |
+|    entropy_loss       | -1.08    |
+|    explained_variance | 0.0372   |
+|    learning_rate      | 0.0007   |
+|    n_updates          | 299      |
+|    policy_loss        | -3.4     |
+|    value_loss         | 18.7     |
+------------------------------------
+
+a2c - 10000
+
+------------------------------------
+| rollout/              |          |
+|    ep_len_mean        | 2.25     |
+|    ep_rew_mean        | 9.24     |
+| time/                 |          |
+|    fps                | 0        |
+|    iterations         | 2000     |
+|    time_elapsed       | 159997   |
+|    total_timesteps    | 10000    |
+| train/                |          |
+|    entropy_loss       | -1.15    |
+|    explained_variance | -0.0454  |
+|    learning_rate      | 0.0007   |
+|    n_updates          | 1999     |
+|    policy_loss        | -2.78    |
+|    value_loss         | 3.49     |
+------------------------------------
+
+DQN - 10000
+----------------------------------
+| rollout/            |          |
+|    ep_len_mean      | 5.31     |
+|    ep_rew_mean      | 3.16     |
+|    exploration_rate | 0.05     |
+| time/               |          |
+|    episodes         | 1840     |
+|    fps              | 0        |
+|    time_elapsed     | 97987    |
+|    total_timesteps  | 9979     |
+----------------------------------
+
+PPO - 25000 tempo 3 giorni e mezzo
+----------------------------------
+| rollout/            |          |
+|    ep_len_mean      | 2.7      |
+|    ep_rew_mean      | 12.2     |
+
+DQN - 25000
+----------------------------------
+| rollout/            |          |
+|    ep_len_mean      | 5.2      |
+|    ep_rew_mean      | 5.88     |
+|    exploration_rate | 0.05     |
+| time/               |          |
+|    episodes         | 4436     |
+|    fps              | 0        |
+|    time_elapsed     | 226636   |
+|    total_timesteps  | 24983    |
+----------------------------------
+
+a2c - new meta 10000
+
+------------------------------------
+| rollout/              |          |
+|    ep_len_mean        | 2.41     |
+|    ep_rew_mean        | 15.2     |
+| time/                 |          |
+|    fps                | 0        |
+|    iterations         | 2000     |
+|    time_elapsed       | 247526   |
+|    total_timesteps    | 10000    |
+| train/                |          |
+|    entropy_loss       | -1.25    |
+|    explained_variance | -4.95    |
+|    learning_rate      | 0.0007   |
+|    n_updates          | 1999     |
+|    policy_loss        | -4.21    |
+|    value_loss         | 4.24     |
+------------------------------------
+

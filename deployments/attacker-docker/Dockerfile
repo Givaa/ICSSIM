@@ -1,10 +1,12 @@
 #FROM kalilinux/kali-rolling
-FROM ubuntu:20.04
+#FROM ubuntu:20.04
+FROM nvidia/cuda:12.3.2-base-ubuntu20.04
+#FROM tensorflow/tensorflow:latest-gpu
+#FROM stablebaselines/stable-baselines3
 
 RUN mkdir src
 
 COPY ./src/ ./src/
-
 
 RUN apt-get update
 
@@ -25,7 +27,13 @@ RUN apt-get update \
 && apt-get install -y ettercap-common \
 && apt-get install -y nmap \
 && apt-get install -y python3-scapy \
-&& pip install paho-mqtt
+&& pip install paho-mqtt \
+&& pip install gymnasium \
+&& pip install tensorflow \
+&& pip install stable-baselines3 \
+&& pip install torchrl \
+&& pip install tqdm \
+&& pip install dowhy
 
 WORKDIR /src
 
