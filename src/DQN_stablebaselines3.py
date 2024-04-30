@@ -10,7 +10,7 @@ model.learn(total_timesteps=25000, log_interval=4)
 model.save("dqn_icssim")
 print("done")
 
-del model # remove to demonstrate saving and loading
+del model
 
 model = DQN.load("dqn_icssim")
 

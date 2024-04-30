@@ -18,14 +18,13 @@ columns = ['State', 'Action', 'Reward', 'New_State']
 df = pd.DataFrame(columns=columns)
 df.to_csv('data.csv', index=False)
 
-# set up matplotlib
+
 is_ipython = 'inline' in matplotlib.get_backend()
 if is_ipython:
     from IPython import display
 
 plt.ion()
 
-# if GPU is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))

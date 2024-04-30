@@ -14,7 +14,7 @@ import pandas as pd
 from dowhy import CausalModel
 
 env = IcssimEnviroment()
-columns = ['Stato', 'Azione', 'Ricompensa', 'Nuovo_Stato']
+columns = ['State', 'Action', 'Reward', 'New_State']
 df = pd.DataFrame(columns=columns)
 
 # set up matplotlib
@@ -223,9 +223,9 @@ def esegui_modello_causale():
     # Crea il modello causale
     modello_causale = CausalModel(
         data=data,
-        treatment='Azione',
-        outcome='Ricompensa',
-        common_causes=['Stato']
+        treatment='Action',
+        outcome='Reward',
+        common_causes=['State']
     )
 
     # Identifica l'effetto causale
@@ -268,10 +268,10 @@ for i_episode in range(num_episodes):
             next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
         
         # Aggiungi una riga al DataFrame
-        df = pd.concat([df, pd.DataFrame({'Stato': state.tolist(),
-                                   'Azione': action.item(),
-                                   'Ricompensa': reward.item(),
-                                   'Nuovo_Stato': [observation.tolist()]}, index=[0])])
+        df = pd.concat([df, pd.DataFrame({'State': state.tolist(),
+                                   'Action': action.item(),
+                                   'Reward': reward.item(),
+                                   'New_State': [observation.tolist()]}, index=[0])])
         
         # Salvare il DataFrame come file CSV
         df.to_csv('data.csv', index=False)
