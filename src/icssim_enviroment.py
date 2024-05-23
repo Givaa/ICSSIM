@@ -2,13 +2,14 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 from ics_sim.protocol import ModbusBase
-from ics_sim.connectors import SQLiteConnector, MemcacheConnector
+from ics_sim.connectors import SQLiteConnector, MemcacheConnector, ConnectorFactory
 from Configs import TAG, Connection
 from pyModbusTCP.client import ModbusClient
 import subprocess
 import random
 import os
 import math
+import time
 
 class IcssimEnviroment(gym.Env):
     def __init__(self, first_plc_ip="192.168.0.11", second_plc_ip="192.168.0.12", plc_port=502):
@@ -20,6 +21,7 @@ class IcssimEnviroment(gym.Env):
         self.connectionSQL = SQLiteConnector(Connection.SQLITE_CONNECTION)
         self.connectionMemcache = MemcacheConnector(Connection.MEMCACHE_LOCAL_CONNECTION)
         self.connectionMemcacheDocker = MemcacheConnector(Connection.MEMCACHE_DOCKER_CONNECTION)
+        self.connectionConnectionFactory = ConnectorFactory.build(Connection.MEMCACHE_LOCAL_CONNECTION)
 
         self.max_episode_steps = 10
         self.current_step = 0
