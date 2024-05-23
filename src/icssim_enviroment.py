@@ -321,13 +321,13 @@ class IcssimEnviroment(gym.Env):
         self.current_step = 0
 
         print("Sto resettando l'ambiente!")
-        while round(self.modbus.decode(self.firstPLC.read_holding_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_VALUE)['id']), self.modbus._word_num)), 1) != 5.8:
-            if self.modbus.decode(self.firstPLC.read_holding_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_VALUE)['id']), self.modbus._word_num)) < 5.8:
-                self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_MODE)['id']), self.modbus.encode(1))
-                self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_MODE)['id']), self.modbus.encode(2))
-            elif self.modbus.decode(self.firstPLC.read_holding_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_VALUE)['id']), self.modbus._word_num)) > 5.8:
-                self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_MODE)['id']), self.modbus.encode(2))
-                self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_MODE)['id']), self.modbus.encode(1))
+        # while round(self.modbus.decode(self.firstPLC.read_holding_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_VALUE)['id']), self.modbus._word_num)), 1) != 5.8:
+        #     if self.modbus.decode(self.firstPLC.read_holding_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_VALUE)['id']), self.modbus._word_num)) < 5.8:
+        #         self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_MODE)['id']), self.modbus.encode(1))
+        #         self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_MODE)['id']), self.modbus.encode(2))
+        #     elif self.modbus.decode(self.firstPLC.read_holding_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_VALUE)['id']), self.modbus._word_num)) > 5.8:
+        #         self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_MODE)['id']), self.modbus.encode(2))
+        #         self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_MODE)['id']), self.modbus.encode(1))
 
         self.connectionSQL.set(TAG.TAG_TANK_INPUT_VALVE_STATUS, 1)
         self.connectionSQL.set(TAG.TAG_TANK_INPUT_VALVE_MODE, 3)
