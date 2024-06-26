@@ -12,6 +12,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import pandas as pd
 from dowhy import CausalModel
+import time
 
 env = IcssimEnviroment()
 columns = ['State', 'Action', 'Reward', 'New_State']
@@ -89,6 +90,8 @@ optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
 memory = ReplayMemory(10000)
 
 steps_done = 0
+total_timesteps = 0  # Timesteps counter
+max_timesteps = 25000  # Timesteps
 
 def select_action(state, effect):
     global steps_done
@@ -99,7 +102,7 @@ def select_action(state, effect):
     if sample > eps_threshold:
         with torch.no_grad():
             q_values = policy_net(state)
-            if effect is not None:  # Aggiunta del controllo sull'effetto del trattamento
+            if effect is not None:
                 if effect > 0:
                     return q_values.max(1).indices.view(1, 1)
                 else:
@@ -109,13 +112,8 @@ def select_action(state, effect):
     else:
         return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
 
-# Utilizzo: sostituisci questa implementazione nella tua funzione select_action() nel ciclo di addestramento,
-# passando l'effetto del trattamento stimato e il tasso di esplorazione (epsilon)
-
-
 episode_durations = []
 episode_rewards = []
-
 
 def plot_durations(show_result=False):
     plt.figure(1)
@@ -215,12 +213,10 @@ def optimize_model():
     optimizer.step()
 
 
-# Definisci una funzione per creare il modello causale, identificare l'effetto causale e stimarlo
 def esegui_modello_causale():
 
     data = pd.read_csv('data.csv')
 
-    # Crea il modello causale
     modello_causale = CausalModel(
         data=data,
         treatment='Action',
@@ -228,13 +224,10 @@ def esegui_modello_causale():
         common_causes=['State']
     )
 
-    # Identifica l'effetto causale
     identified_estimand = modello_causale.identify_effect()
 
-    # Stima l'effetto causale
     estimate = modello_causale.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
 
-    # Ottieni l'effetto del trattamento sulla ricompensa
     effetto_trattamento = estimate.value
     
     return effetto_trattamento
@@ -242,9 +235,14 @@ def esegui_modello_causale():
 if torch.cuda.is_available():
     num_episodes = 1200
 else:
-    num_episodes = 600
+    num_episodes = 100000000000
+
+start_time = time.time()  # Time counter
 
 for i_episode in range(num_episodes):
+    if total_timesteps >= max_timesteps:
+        break
+
     # Initialize the environment and get its state
     print(f"Episodio numero: {i_episode}")
     state, info = env.reset()
@@ -262,21 +260,23 @@ for i_episode in range(num_episodes):
         reward = torch.tensor([reward], device=device)
         done = terminated or truncated
 
+        total_timesteps += 1  
+
+        if total_timesteps >= max_timesteps:
+            done = True
+
         if terminated:
             next_state = None
         else:
             next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
         
-        # Aggiungi una riga al DataFrame
         df = pd.concat([df, pd.DataFrame({'State': state.tolist(),
                                    'Action': action.item(),
                                    'Reward': reward.item(),
                                    'New_State': [observation.tolist()]}, index=[0])])
         
-        # Salvare il DataFrame come file CSV
         df.to_csv('data.csv', index=False)
-
-        # Store the transition in memory
+        
         memory.push(state, action, next_state, reward)
 
         # Move to the next state
@@ -298,11 +298,15 @@ for i_episode in range(num_episodes):
             plot_durations()    
             break
 
+end_time = time.time() 
+training_time = end_time - start_time 
+
 torch.save(policy_net.state_dict(), 'DQN_causal.pth')
 
-print('Complete')
+print(f'Training complete in {training_time:.2f} seconds')
+print(f'Total episodes: {i_episode}')
+
 plot_durations(show_result=True)
 plt.savefig('/src/grafico_risultato_durata.png')
 plt.ioff()
 plt.show()
-

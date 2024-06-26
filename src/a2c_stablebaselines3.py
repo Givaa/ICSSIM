@@ -5,7 +5,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 vec_env = IcssimEnviroment()
 
 model = A2C("MlpPolicy", vec_env, verbose=1, device="cpu", ent_coef=0.1)
-model.learn(total_timesteps=10000)
+model.learn(total_timesteps=25000)
 model.save("a2c_icssim")
 print("done")
 
