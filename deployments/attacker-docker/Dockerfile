@@ -30,7 +30,8 @@ RUN apt-get update \
 && pip install tensorflow \
 && pip install keras \
 && pip install stable-baselines3 \
-&& pip install stable-baselines3[extra]
+&& pip install stable-baselines3[extra] \
+&& pip install dowhy
 
 WORKDIR /src
 
