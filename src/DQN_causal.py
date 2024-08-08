@@ -13,9 +13,10 @@ import torch.nn.functional as F
 import pandas as pd
 from dowhy import CausalModel
 import time
+import numpy as np
 
 env = IcssimEnviroment()
-columns = ['State', 'Action', 'Reward', 'New_State']
+columns = ['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'Action', 'Reward', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
 df = pd.DataFrame(columns=columns)
 
 # set up matplotlib
@@ -31,7 +32,6 @@ Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
 class ReplayMemory(object):
-
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
 
@@ -46,28 +46,18 @@ class ReplayMemory(object):
         return len(self.memory)
     
 class DQN(nn.Module):
-
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
         self.layer3 = nn.Linear(128, n_actions)
 
-    # Called with either one element to determine next action, or a batch
-    # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
     
-
-# BATCH_SIZE is the number of transitions sampled from the replay buffer
-# GAMMA is the discount factor as mentioned in the previous section
-# EPS_START is the starting value of epsilon
-# EPS_END is the final value of epsilon
-# EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
-# TAU is the update rate of the target network
-# LR is the learning rate of the ``AdamW`` optimizer
+# Hyperparameters
 BATCH_SIZE = 128
 GAMMA = 0.99
 EPS_START = 0.9
@@ -76,9 +66,7 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
 
-# Get number of actions from gym action space
 n_actions = env.action_space.n
-# Get the number of state observations
 state, info = env.reset()
 n_observations = len(state)
 
@@ -90,8 +78,8 @@ optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
 memory = ReplayMemory(10000)
 
 steps_done = 0
-total_timesteps = 0  # Timesteps counter
-max_timesteps = 25000  # Timesteps
+total_timesteps = 0
+max_timesteps = 25000
 
 def select_action(state, effect):
     global steps_done
@@ -126,13 +114,12 @@ def plot_durations(show_result=False):
     plt.xlabel('Episode')
     plt.ylabel('Duration')
     plt.plot(durations_t.numpy())
-    # Take 100 episode averages and plot them too
     if len(durations_t) >= 100:
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
 
-    plt.pause(0.001)  # pause a bit so that plots are updated
+    plt.pause(0.001)
     if is_ipython:
         if not show_result:
             display.display(plt.gcf())
@@ -151,13 +138,12 @@ def plot_rewards(show_result=False):
     plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.plot(rewards_t.numpy())
-    # Take 100 episode averages and plot them too
     if len(rewards_t) >= 100:
         means = rewards_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
 
-    plt.pause(0.001)  # pause a bit so that plots are updated
+    plt.pause(0.001)
     if is_ipython:
         if not show_result:
             display.display(plt.gcf())
@@ -165,18 +151,12 @@ def plot_rewards(show_result=False):
         else:
             display.display(plt.gcf())
 
-
 def optimize_model():
     if len(memory) < BATCH_SIZE:
         return
     transitions = memory.sample(BATCH_SIZE)
-    # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
-    # detailed explanation). This converts batch-array of Transitions
-    # to Transition of batch-arrays.
     batch = Transition(*zip(*transitions))
 
-    # Compute a mask of non-final states and concatenate the batch elements
-    # (a final state would've been the one after which simulation ended)
     non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                           batch.next_state)), device=device, dtype=torch.bool)
     non_final_next_states = torch.cat([s for s in batch.next_state
@@ -185,50 +165,39 @@ def optimize_model():
     action_batch = torch.cat(batch.action)
     reward_batch = torch.cat(batch.reward)
 
-    # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-    # columns of actions taken. These are the actions which would've been taken
-    # for each batch state according to policy_net
     state_action_values = policy_net(state_batch).gather(1, action_batch)
 
-    # Compute V(s_{t+1}) for all next states.
-    # Expected values of actions for non_final_next_states are computed based
-    # on the "older" target_net; selecting their best reward with max(1).values
-    # This is merged based on the mask, such that we'll have either the expected
-    # state value or 0 in case the state was final.
     next_state_values = torch.zeros(BATCH_SIZE, device=device)
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
-    # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
-    # Compute Huber loss
     criterion = nn.SmoothL1Loss()
     loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
-    # Optimize the model
     optimizer.zero_grad()
     loss.backward()
-    # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
-
 def esegui_modello_causale():
-
     data = pd.read_csv('data.csv')
+    data.dropna(inplace=True)
 
     modello_causale = CausalModel(
         data=data,
         treatment='Action',
         outcome='Reward',
-        common_causes=['State']
+        common_causes=['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
     )
 
     identified_estimand = modello_causale.identify_effect()
-
-    estimate = modello_causale.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
-
-    effetto_trattamento = estimate.value
+    try:
+        estimate = modello_causale.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
+        effetto_trattamento = estimate.value
+    except np.linalg.LinAlgError:
+        print("LinAlgError: SVD did not converge. Setting effect to None.")
+        effetto_trattamento = None
     
     return effetto_trattamento
 
@@ -237,14 +206,14 @@ if torch.cuda.is_available():
 else:
     num_episodes = 100000000000
 
-start_time = time.time()  # Time counter
+start_time = time.time()
 
 for i_episode in range(num_episodes):
     if total_timesteps >= max_timesteps:
         break
 
-    # Initialize the environment and get its state
-    print(f"Episodio numero: {i_episode}")
+    print(f"Episodio numero: {i_episode + 1}")
+    print(f"Timesteps attuali: {total_timesteps}")
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
 
@@ -252,7 +221,10 @@ for i_episode in range(num_episodes):
 
     if (i_episode + 1) % 5 == 0:
         effetto_trattamento = esegui_modello_causale()
-        print("L'effetto del trattamento è: " + str(effetto_trattamento))
+        if effetto_trattamento is not None:
+            print("L'effetto del trattamento è: " + str(effetto_trattamento))
+        else:
+            print("L'effetto del trattamento non è stato calcolato a causa di un errore numerico.")
 
     for t in count():
         action = select_action(state, effetto_trattamento)
@@ -269,24 +241,50 @@ for i_episode in range(num_episodes):
             next_state = None
         else:
             next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+
+        flat_list = [num for sublist in state.tolist() for num in sublist]
+
+        fixed_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in flat_list]
+        fixed_new_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in observation.tolist()]
         
-        df = pd.concat([df, pd.DataFrame({'State': state.tolist(),
-                                   'Action': action.item(),
-                                   'Reward': reward.item(),
-                                   'New_State': [observation.tolist()]}, index=[0])])
+        df = pd.concat([df, pd.DataFrame({'Actual_input_valve_status': fixed_state[0], 
+                                        'Actual_input_valve_mode': fixed_state[1], 
+                                        'Actual_tank_level_value': fixed_state[2],  
+                                        'Actual_tank_level_min': fixed_state[3], 
+                                        'Actual_tank_level_max': fixed_state[4], 
+                                        'Actual_tank_output_valve_status': fixed_state[5], 
+                                        'Actual_tank_output_valve_mode': fixed_state[6], 
+                                        'Actual_tank_output_flow_value': fixed_state[7], 
+                                        'Actual_belt_engine_status': fixed_state[8], 
+                                        'Actual_belt_engine_mode': fixed_state[9], 
+                                        'Actual_bottle_level_value': fixed_state[10],
+                                        'Actual_bottle_level_max': fixed_state[11], 
+                                        'Actual_bottle_distance_to_filler_value': fixed_state[12], 
+                                        'Action': action.item(),
+                                        'Reward': reward.item(),
+                                        'New_input_valve_status': fixed_new_state[0], 
+                                        'New_input_valve_mode': fixed_new_state[1], 
+                                        'New_tank_level_value': fixed_new_state[2],  
+                                        'New_tank_level_min': fixed_new_state[3], 
+                                        'New_tank_level_max': fixed_new_state[4], 
+                                        'New_tank_output_valve_status': fixed_new_state[5], 
+                                        'New_tank_output_valve_mode': fixed_new_state[6], 
+                                        'New_tank_output_flow_value': fixed_new_state[7], 
+                                        'New_belt_engine_status': fixed_new_state[8], 
+                                        'New_belt_engine_mode': fixed_new_state[9], 
+                                        'New_bottle_level_value': fixed_new_state[10], 
+                                        'New_bottle_level_max': fixed_new_state[11], 
+                                        'New_bottle_distance_to_filler_value': fixed_new_state[12],
+                                        }, index=[0])])
         
         df.to_csv('data.csv', index=False)
         
         memory.push(state, action, next_state, reward)
 
-        # Move to the next state
         state = next_state
 
-        # Perform one step of the optimization (on the policy network)
         optimize_model()
 
-        # Soft update of the target network's weights
-        # θ′ ← τ θ + (1 −τ )θ′
         target_net_state_dict = target_net.state_dict()
         policy_net_state_dict = policy_net.state_dict()
         for key in policy_net_state_dict:
@@ -305,8 +303,8 @@ torch.save(policy_net.state_dict(), 'DQN_causal.pth')
 
 print(f'Training complete in {training_time:.2f} seconds')
 print(f'Total episodes: {i_episode}')
-
+      
 plot_durations(show_result=True)
-plt.savefig('/src/grafico_risultato_durata.png')
+plt.savefig('grafico_risultato_durata.png')
 plt.ioff()
 plt.show()
