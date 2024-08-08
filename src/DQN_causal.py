@@ -15,22 +15,28 @@ from dowhy import CausalModel
 import time
 import numpy as np
 
+# Initialize the custom environment
 env = IcssimEnviroment()
+
+# Define the columns for the DataFrame that will store the environment's data
 columns = ['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'Action', 'Reward', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
 df = pd.DataFrame(columns=columns)
 
-# set up matplotlib
+# Set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 if is_ipython:
     from IPython import display
 
-plt.ion()
+plt.ion()  # Turn on interactive mode in matplotlib
 
-# if GPU is to be used
+# Set the device to GPU if available, otherwise use CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Define a named tuple to store transitions in the replay memory
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
+# Define a Replay Memory class to store and sample transitions
 class ReplayMemory(object):
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
@@ -44,7 +50,8 @@ class ReplayMemory(object):
 
     def __len__(self):
         return len(self.memory)
-    
+
+# Define the Deep Q-Network (DQN) model
 class DQN(nn.Module):
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
@@ -56,7 +63,7 @@ class DQN(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
-    
+
 # Hyperparameters
 BATCH_SIZE = 128
 GAMMA = 0.99
@@ -66,14 +73,17 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
 
+# Initialize environment action and state dimensions
 n_actions = env.action_space.n
 state, info = env.reset()
 n_observations = len(state)
 
+# Initialize the policy and target networks
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 
+# Set up the optimizer and replay memory
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
 memory = ReplayMemory(10000)
 
@@ -81,6 +91,7 @@ steps_done = 0
 total_timesteps = 0
 max_timesteps = 25000
 
+# Function to select an action based on epsilon-greedy policy and treatment effect
 def select_action(state, effect):
     global steps_done
     sample = random.random()
@@ -100,9 +111,11 @@ def select_action(state, effect):
     else:
         return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
 
+# Lists to store episode durations and rewards for plotting
 episode_durations = []
 episode_rewards = []
 
+# Function to plot episode durations during training
 def plot_durations(show_result=False):
     plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
@@ -127,6 +140,7 @@ def plot_durations(show_result=False):
         else:
             display.display(plt.gcf())
 
+# Function to plot episode rewards during training
 def plot_rewards(show_result=False):
     plt.figure(1)
     rewards_t = torch.tensor(episode_rewards, dtype=torch.float)
@@ -151,6 +165,7 @@ def plot_rewards(show_result=False):
         else:
             display.display(plt.gcf())
 
+# Function to optimize the DQN model using sampled transitions from replay memory
 def optimize_model():
     if len(memory) < BATCH_SIZE:
         return
@@ -180,54 +195,58 @@ def optimize_model():
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
-def esegui_modello_causale():
+# Function to execute the causal model and estimate the treatment effect
+def run_causal_model():
     data = pd.read_csv('data.csv')
     data.dropna(inplace=True)
 
-    modello_causale = CausalModel(
+    causal_model = CausalModel(
         data=data,
         treatment='Action',
         outcome='Reward',
         common_causes=['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
     )
 
-    identified_estimand = modello_causale.identify_effect()
+    identified_estimand = causal_model.identify_effect()
     try:
-        estimate = modello_causale.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
-        effetto_trattamento = estimate.value
+        estimate = causal_model.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
+        treatment_effect = estimate.value
     except np.linalg.LinAlgError:
         print("LinAlgError: SVD did not converge. Setting effect to None.")
-        effetto_trattamento = None
+        treatment_effect = None
     
-    return effetto_trattamento
+    return treatment_effect
 
+# Set the number of episodes based on whether GPU is available
 if torch.cuda.is_available():
     num_episodes = 1200
 else:
-    num_episodes = 100000000000
+    num_episodes = 100000000000  # Very large number for testing purposes
 
 start_time = time.time()
 
+# Main training loop
 for i_episode in range(num_episodes):
     if total_timesteps >= max_timesteps:
         break
 
-    print(f"Episodio numero: {i_episode + 1}")
-    print(f"Timesteps attuali: {total_timesteps}")
+    print(f"Episode number: {i_episode + 1}")
+    print(f"Current timesteps: {total_timesteps}")
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
 
-    effetto_trattamento = None
+    treatment_effect = None
 
+    # Run causal model every 5 episodes
     if (i_episode + 1) % 5 == 0:
-        effetto_trattamento = esegui_modello_causale()
-        if effetto_trattamento is not None:
-            print("L'effetto del trattamento è: " + str(effetto_trattamento))
+        treatment_effect = run_causal_model()
+        if treatment_effect is not None:
+            print("The treatment effect is: " + str(treatment_effect))
         else:
-            print("L'effetto del trattamento non è stato calcolato a causa di un errore numerico.")
+            print("The treatment effect was not calculated due to a numerical error.")
 
     for t in count():
-        action = select_action(state, effetto_trattamento)
+        action = select_action(state, treatment_effect)
         observation, reward, terminated, truncated, _ = env.step(action.item())
         reward = torch.tensor([reward], device=device)
         done = terminated or truncated
@@ -285,6 +304,7 @@ for i_episode in range(num_episodes):
 
         optimize_model()
 
+        # Update the target network using soft update
         target_net_state_dict = target_net.state_dict()
         policy_net_state_dict = policy_net.state_dict()
         for key in policy_net_state_dict:
@@ -299,12 +319,14 @@ for i_episode in range(num_episodes):
 end_time = time.time() 
 training_time = end_time - start_time 
 
+# Save the trained model
 torch.save(policy_net.state_dict(), 'DQN_causal.pth')
 
 print(f'Training complete in {training_time:.2f} seconds')
 print(f'Total episodes: {i_episode}')
       
+# Plot the final results
 plot_durations(show_result=True)
-plt.savefig('grafico_risultato_durata.png')
+plt.savefig('result_duration_plot_DQN1.png')
 plt.ioff()
 plt.show()

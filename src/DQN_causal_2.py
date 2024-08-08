@@ -14,8 +14,11 @@ import pandas as pd
 from dowhy import CausalModel
 import time
 
+# Initialize the custom environment
 env = IcssimEnviroment()
-columns = ['State', 'Action', 'Reward', 'New_State']
+
+# Define column names for the dataset
+columns = ['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'Action', 'Reward', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
 df = pd.DataFrame(columns=columns)
 df.to_csv('data.csv', index=False)
 
@@ -23,13 +26,16 @@ is_ipython = 'inline' in matplotlib.get_backend()
 if is_ipython:
     from IPython import display
 
-plt.ion()
+plt.ion()  # Interactive mode for plotting
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Define a named tuple to store experiences in the replay memory
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
 class ReplayMemory(object):
+    """ A cyclic buffer of bounded size that holds the transitions observed recently """
 
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
@@ -39,13 +45,14 @@ class ReplayMemory(object):
         self.memory.append(Transition(*args))
 
     def sample(self, batch_size):
+        """Sample a batch of transitions"""
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
         return len(self.memory)
-    
-class DQN(nn.Module):
 
+# Define the Deep Q-Network (DQN) model
+class DQN(nn.Module):
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
         self.layer1 = nn.Linear(n_observations, 128)
@@ -57,7 +64,7 @@ class DQN(nn.Module):
         x = F.relu(self.layer2(x))
         return self.layer3(x)
     
-
+# Hyperparameters
 BATCH_SIZE = 128
 GAMMA = 0.99
 EPS_START = 0.9
@@ -66,10 +73,12 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
 
+# Get the number of actions and observations from the environment
 n_actions = env.action_space.n
 state, info = env.reset()
 n_observations = len(state)
 
+# Create policy and target networks
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
@@ -81,6 +90,7 @@ steps_done = 0
 total_timesteps = 0
 max_timesteps = 25000
 
+# Function to select an action based on the causal model or random sampling (epsilon-greedy strategy)
 def select_action(state, treatment_effects):
     global steps_done
     sample = random.random()
@@ -105,10 +115,11 @@ def select_action(state, treatment_effects):
     else:
         return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
 
-
+# Lists to store episode durations and rewards for plotting
 episode_durations = []
 episode_rewards = []
 
+# Function to plot episode durations
 def plot_durations(show_result=False):
     plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
@@ -133,6 +144,7 @@ def plot_durations(show_result=False):
         else:
             display.display(plt.gcf())
 
+# Function to plot episode rewards
 def plot_rewards(show_result=False):
     plt.figure(1)
     rewards_t = torch.tensor(episode_rewards, dtype=torch.float)
@@ -157,6 +169,7 @@ def plot_rewards(show_result=False):
         else:
             display.display(plt.gcf())
 
+# Function to optimize the model using the stored transitions
 def optimize_model():
     if len(memory) < BATCH_SIZE:
         return
@@ -186,8 +199,10 @@ def optimize_model():
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
+# Function to execute the causal model and estimate treatment effect
 def execute_causal_model(action):
     data = pd.read_csv('data.csv')
+    data.dropna(inplace=True)
 
     filtered_data = data[data['Action'] == action]
 
@@ -195,20 +210,24 @@ def execute_causal_model(action):
         return None
 
     causal_model = CausalModel(
-        data=filtered_data,
+        data=data,
         treatment='Action',
         outcome='Reward',
-        common_causes=['State']
+        common_causes=['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
     )
 
     identified_estimand = causal_model.identify_effect()
 
-    estimate = causal_model.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
-
-    treatment_effect = estimate.value
+    try:
+        estimate = causal_model.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
+        treatment_effect = estimate.value
+    except np.linalg.LinAlgError:
+        print("LinAlgError: SVD did not converge. Setting effect to None.")
+        treatment_effect = None
 
     return treatment_effect
 
+# Number of episodes depending on GPU availability
 if torch.cuda.is_available():
     num_episodes = 1200
 else:
@@ -216,14 +235,17 @@ else:
 
 start_time = time.time()
 
+# Main training loop
 for i_episode in range(num_episodes):
     if total_timesteps >= max_timesteps:
         break
 
-    print(f"Episodio numero: {i_episode}")
+    print(f"Episode number: {i_episode}")
+    print(f"Current timesteps: {total_timesteps}")
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
 
+    # Execute causal model for each action
     treatment_effects = {}
     for action in range(env.action_space.n):
         treatment_effects[action] = execute_causal_model(action)
@@ -243,11 +265,42 @@ for i_episode in range(num_episodes):
             next_state = None
         else:
             next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+
+        flat_list = [num for sublist in state.tolist() for num in sublist]
+
+        fixed_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in flat_list]
+        fixed_new_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in observation.tolist()]
         
-        df = pd.concat([df, pd.DataFrame({'State': state.tolist(),
-                                   'Action': action.item(),
-                                   'Reward': reward.item(),
-                                   'New_State': [observation.tolist()]}, index=[0])])
+        # Store experience in the dataframe
+        df = pd.concat([df, pd.DataFrame({'Actual_input_valve_status': fixed_state[0], 
+                                        'Actual_input_valve_mode': fixed_state[1], 
+                                        'Actual_tank_level_value': fixed_state[2],  
+                                        'Actual_tank_level_min': fixed_state[3], 
+                                        'Actual_tank_level_max': fixed_state[4], 
+                                        'Actual_tank_output_valve_status': fixed_state[5], 
+                                        'Actual_tank_output_valve_mode': fixed_state[6], 
+                                        'Actual_tank_output_flow_value': fixed_state[7], 
+                                        'Actual_belt_engine_status': fixed_state[8], 
+                                        'Actual_belt_engine_mode': fixed_state[9], 
+                                        'Actual_bottle_level_value': fixed_state[10],
+                                        'Actual_bottle_level_max': fixed_state[11], 
+                                        'Actual_bottle_distance_to_filler_value': fixed_state[12], 
+                                        'Action': action.item(),
+                                        'Reward': reward.item(),
+                                        'New_input_valve_status': fixed_new_state[0], 
+                                        'New_input_valve_mode': fixed_new_state[1], 
+                                        'New_tank_level_value': fixed_new_state[2],  
+                                        'New_tank_level_min': fixed_new_state[3], 
+                                        'New_tank_level_max': fixed_new_state[4], 
+                                        'New_tank_output_valve_status': fixed_new_state[5], 
+                                        'New_tank_output_valve_mode': fixed_new_state[6], 
+                                        'New_tank_output_flow_value': fixed_new_state[7], 
+                                        'New_belt_engine_status': fixed_new_state[8], 
+                                        'New_belt_engine_mode': fixed_new_state[9], 
+                                        'New_bottle_level_value': fixed_new_state[10], 
+                                        'New_bottle_level_max': fixed_new_state[11], 
+                                        'New_bottle_distance_to_filler_value': fixed_new_state[12],
+                                        }, index=[0])])
         
         df.to_csv('data.csv', index=False)
 
@@ -276,6 +329,6 @@ torch.save(policy_net.state_dict(), 'DQN_causal_2.pth')
 print(f'Training complete in {training_time:.2f} seconds')
 print(f'Total episodes: {i_episode}')
 plot_durations(show_result=True)
-plt.savefig('/src/grafico_risultato_durata.png')
+plt.savefig('/src/result_duration_plot_DQN2.png')
 plt.ioff()
 plt.show()
