@@ -82,7 +82,7 @@ class IcssimEnviroment(gym.Env):
                 '-p-',
                 target]
             subprocess.run(bash_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            reward = reward - 0
+            # reward = reward - 0
             print("Scansione Nmap")
         elif action == 1: # DDOS primo PLC
             print("DDos primo PLC")
@@ -104,33 +104,33 @@ class IcssimEnviroment(gym.Env):
                 processes.append(process)
             for process in processes:
                 process.communicate()
-            reward = reward - 0
+            # reward = reward - 0
         elif action == 2: # Input tank ON
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_STATUS)['id']), self.modbus.encode(1))
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_MODE)['id']), self.modbus.encode(2))
             print("Input tank ON")
-            reward = reward + 1 if valvola_ingresso_modalità != on else reward - 1
+            # reward = reward + 1 if valvola_ingresso_modalità != on else reward - 1
         elif action == 3: # Output tank su ON 
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_STATUS)['id']), self.modbus.encode(1))
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_MODE)['id']), self.modbus.encode(2))
             print("Output tank su ON")
-            reward = reward + 1 if valvola_uscita_modalità != on else reward - 1
+            # reward = reward + 1 if valvola_uscita_modalità != on else reward - 1
         elif action == 4: # Nastro trasportatore su ON
             self.secondPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_CONVEYOR_BELT_ENGINE_STATUS)['id']), self.modbus.encode(1))
             self.secondPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_CONVEYOR_BELT_ENGINE_MODE)['id']), self.modbus.encode(2))
             print("Nastro trasportatore su ON")
-            reward = reward + 1 if motore_nastro_modalità != on else reward - 1
+            # reward = reward + 1 if motore_nastro_modalità != on else reward - 1
         elif action == 5: # Nastro trasportatore su OFF
             self.secondPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_CONVEYOR_BELT_ENGINE_MODE)['id']), self.modbus.encode(1))
-            reward = reward + 1 if motore_nastro_modalità != off else reward - 1
+            # reward = reward + 1 if motore_nastro_modalità != off else reward - 1
             print("Nastro trasportatore su OFF")
         elif action == 6: # Output tank su OFF
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_OUTPUT_VALVE_MODE)['id']), self.modbus.encode(1))
-            reward = reward + 1 if valvola_uscita_modalità != off else reward - 1
+            # reward = reward + 1 if valvola_uscita_modalità != off else reward - 1
             print("Output tank su OFF")
         elif action == 7: # Input tank OFF
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_INPUT_VALVE_MODE)['id']), self.modbus.encode(1))
-            reward = reward + 1 if valvola_ingresso_modalità != off else reward - 1
+            # reward = reward + 1 if valvola_ingresso_modalità != off else reward - 1
             print("Input tank OFF")
         elif action == 8: # DDos secondo PLC 
             print("DDos secondo PLC")
@@ -152,18 +152,18 @@ class IcssimEnviroment(gym.Env):
                 processes.append(process)
             for process in processes:
                 process.communicate()
-            reward = reward - 0
+            # reward = reward - 0
         elif action == 9:
             rand3 = random.randint(0, 4)
             self.secondPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_BOTTLE_LEVEL_MAX)['id']), self.modbus.encode(rand3))
-            reward = reward + 0 if livello_max_bottiglia != rand3 else reward - 1
+            # reward = reward + 0 if livello_max_bottiglia != rand3 else reward - 1
             print(f"Capacità massima della bottiglia impostata a: {rand3}")
         elif action == 10: # Regolazione dei valori di massimo e di minimo in modo casuale
             rand1 = random.randint(0, 5)
             rand2 = random.randint(5, 10)
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_MIN)['id']), self.modbus.encode(rand1))
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_MAX)['id']), self.modbus.encode(rand2))
-            reward = reward + 1 if livello_serbatoio_min != rand1 and livello_serbatoio_max != rand2 else reward - 1
+            # reward = reward + 1 if livello_serbatoio_min != rand1 and livello_serbatoio_max != rand2 else reward - 1
             print(f"Tank level MIN: {rand1}, MAX: {rand2}")
         # elif action == 13: # Replay attack tra HMI2 e il primo PLC
             #     print("Replay attack tra HMI2 e il primo PLC")
@@ -265,7 +265,7 @@ class IcssimEnviroment(gym.Env):
             print(bash_command)
             subprocess.run(bash_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             subprocess.run(['echo', '1'], stdout=open('/proc/sys/net/ipv4/ip_forward',"w"))
-            reward = reward + 0
+            # reward = reward + 0
         
         self.valore_simulatore = self.get_real_time_data()
         valvola_ingresso_stato = self.valore_simulatore[0]  # Stato della valvola di ingresso del serbatoio (0: OFF, 1: ON)
