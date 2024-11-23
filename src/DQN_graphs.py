@@ -7,7 +7,7 @@ import time
 
 env = IcssimEnviroment()
 
-model = A2C.load("a2c_icssim")
+model = PPO.load("modelli_nuovi/ppo_icssim")
 
 episode_times = []
 episode_rewards = []
@@ -38,7 +38,7 @@ plt.xlabel('Episodio')
 plt.ylabel('Tempo (s)')
 plt.grid(True)
 plt.show()
-plt.savefig('DQN_stable_time.png')
+plt.savefig('modelli_nuovi/PPO_stable_time.png')
 
 plt.figure(figsize=(10, 5))
 plt.plot(range(1, num_episodes + 1), episode_rewards, marker='o', linestyle='-')
@@ -47,4 +47,4 @@ plt.xlabel('Episodio')
 plt.ylabel('Reward')
 plt.grid(True)
 plt.show()
-plt.savefig('DQN_stable_reward.png')
+plt.savefig('modelli_nuovi/PPO_stable_reward.png')

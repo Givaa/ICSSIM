@@ -13,12 +13,28 @@ import torch.nn.functional as F
 import pandas as pd
 from dowhy import CausalModel
 import time
+<<<<<<< Updated upstream
 import numpy as np
+=======
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter("retest/DQN_causal_1000_6")
+
+def log_metrics(episode, reward, duration, loss):
+    writer.add_scalar("Reward/Episode", reward, episode)
+    writer.add_scalar("Duration/Episode", duration, episode)
+    writer.add_scalar("Loss/Episode", loss, episode)
+>>>>>>> Stashed changes
 
 # Initialize the custom environment
 env = IcssimEnviroment()
+<<<<<<< Updated upstream
 
 # Define the columns for the DataFrame that will store the environment's data
+=======
+>>>>>>> Stashed changes
 columns = ['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'Action', 'Reward', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
 df = pd.DataFrame(columns=columns)
 
@@ -50,8 +66,12 @@ class ReplayMemory(object):
 
     def __len__(self):
         return len(self.memory)
+<<<<<<< Updated upstream
 
 # Define the Deep Q-Network (DQN) model
+=======
+    
+>>>>>>> Stashed changes
 class DQN(nn.Module):
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
@@ -63,7 +83,11 @@ class DQN(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
+<<<<<<< Updated upstream
 
+=======
+    
+>>>>>>> Stashed changes
 # Hyperparameters
 BATCH_SIZE = 128
 GAMMA = 0.99
@@ -73,7 +97,10 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
 
+<<<<<<< Updated upstream
 # Initialize environment action and state dimensions
+=======
+>>>>>>> Stashed changes
 n_actions = env.action_space.n
 state, info = env.reset()
 n_observations = len(state)
@@ -89,7 +116,11 @@ memory = ReplayMemory(10000)
 
 steps_done = 0
 total_timesteps = 0
+<<<<<<< Updated upstream
 max_timesteps = 25000
+=======
+max_timesteps = 1000
+>>>>>>> Stashed changes
 
 # Function to select an action based on epsilon-greedy policy and treatment effect
 def select_action(state, effect):
@@ -165,7 +196,10 @@ def plot_rewards(show_result=False):
         else:
             display.display(plt.gcf())
 
+<<<<<<< Updated upstream
 # Function to optimize the DQN model using sampled transitions from replay memory
+=======
+>>>>>>> Stashed changes
 def optimize_model():
     if len(memory) < BATCH_SIZE:
         return
@@ -195,8 +229,12 @@ def optimize_model():
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
+<<<<<<< Updated upstream
 # Function to execute the causal model and estimate the treatment effect
 def run_causal_model():
+=======
+def esegui_modello_causale():
+>>>>>>> Stashed changes
     data = pd.read_csv('data.csv')
     data.dropna(inplace=True)
 
@@ -207,6 +245,7 @@ def run_causal_model():
         common_causes=['Actual_input_valve_status', 'Actual_input_valve_mode', 'Actual_tank_level_value',  'Actual_tank_level_min', 'Actual_tank_level_max', 'Actual_tank_output_valve_status', 'Actual_tank_output_valve_mode', 'Actual_tank_output_flow_value', 'Actual_belt_engine_status', 'Actual_belt_engine_mode', 'Actual_bottle_level_value', 'Actual_bottle_level_max', 'Actual_bottle_distance_to_filler_value', 'New_input_valve_status', 'New_input_valve_mode', 'New_tank_level_value',  'New_tank_level_min', 'New_tank_level_max', 'New_tank_output_valve_status', 'New_tank_output_valve_mode', 'New_tank_output_flow_value', 'New_belt_engine_status', 'New_belt_engine_mode', 'New_bottle_level_value', 'New_bottle_level_max', 'New_bottle_distance_to_filler_value']
     )
 
+<<<<<<< Updated upstream
     identified_estimand = causal_model.identify_effect()
     try:
         estimate = causal_model.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
@@ -214,6 +253,15 @@ def run_causal_model():
     except np.linalg.LinAlgError:
         print("LinAlgError: SVD did not converge. Setting effect to None.")
         treatment_effect = None
+=======
+    identified_estimand = modello_causale.identify_effect()
+    try:
+        estimate = modello_causale.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
+        effetto_trattamento = estimate.value
+    except np.linalg.LinAlgError:
+        print("LinAlgError: SVD did not converge. Setting effect to None.")
+        effetto_trattamento = None
+>>>>>>> Stashed changes
     
     return treatment_effect
 
@@ -230,8 +278,13 @@ for i_episode in range(num_episodes):
     if total_timesteps >= max_timesteps:
         break
 
+<<<<<<< Updated upstream
     print(f"Episode number: {i_episode + 1}")
     print(f"Current timesteps: {total_timesteps}")
+=======
+    print(f"Episodio numero: {i_episode + 1}")
+    print(f"Timesteps attuali: {total_timesteps}")
+>>>>>>> Stashed changes
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
 
@@ -239,11 +292,19 @@ for i_episode in range(num_episodes):
 
     # Run causal model every 5 episodes
     if (i_episode + 1) % 5 == 0:
+<<<<<<< Updated upstream
         treatment_effect = run_causal_model()
         if treatment_effect is not None:
             print("The treatment effect is: " + str(treatment_effect))
         else:
             print("The treatment effect was not calculated due to a numerical error.")
+=======
+        effetto_trattamento = esegui_modello_causale()
+        if effetto_trattamento is not None:
+            print("L'effetto del trattamento è: " + str(effetto_trattamento))
+        else:
+            print("L'effetto del trattamento non è stato calcolato a causa di un errore numerico.")
+>>>>>>> Stashed changes
 
     for t in count():
         action = select_action(state, treatment_effect)
@@ -304,7 +365,10 @@ for i_episode in range(num_episodes):
 
         optimize_model()
 
+<<<<<<< Updated upstream
         # Update the target network using soft update
+=======
+>>>>>>> Stashed changes
         target_net_state_dict = target_net.state_dict()
         policy_net_state_dict = policy_net.state_dict()
         for key in policy_net_state_dict:
@@ -313,20 +377,32 @@ for i_episode in range(num_episodes):
 
         if done:
             episode_durations.append(t + 1)
+            episode_rewards.append(reward.item())
+            avg_loss = loss.item() if 'loss' in locals() else 0
+            log_metrics(i_episode, reward.item(), t + 1, avg_loss)
             plot_durations()    
             break
 
 end_time = time.time() 
 training_time = end_time - start_time 
 
+<<<<<<< Updated upstream
 # Save the trained model
 torch.save(policy_net.state_dict(), 'DQN_causal.pth')
+=======
+torch.save(policy_net.state_dict(), 'retest/DQN_causal_1000_6/DQN_causal_1000_6.pth')
+>>>>>>> Stashed changes
 
 print(f'Training complete in {training_time:.2f} seconds')
 print(f'Total episodes: {i_episode}')
       
+<<<<<<< Updated upstream
 # Plot the final results
 plot_durations(show_result=True)
 plt.savefig('result_duration_plot_DQN1.png')
+=======
+plot_durations(show_result=True)
+plt.savefig('grafico_risultato_durata.png')
+>>>>>>> Stashed changes
 plt.ioff()
 plt.show()

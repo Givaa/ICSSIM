@@ -13,6 +13,8 @@ import torch.nn.functional as F
 import pandas as pd
 from dowhy import CausalModel
 import time
+import numpy as np
+from joblib import Parallel, delayed
 
 # Initialize the custom environment
 env = IcssimEnviroment()
@@ -67,9 +69,9 @@ class DQN(nn.Module):
 # Hyperparameters
 BATCH_SIZE = 128
 GAMMA = 0.99
-EPS_START = 0.9
+EPS_START = 1.0 
 EPS_END = 0.05
-EPS_DECAY = 1000
+EPS_DECAY = 500
 TAU = 0.005
 LR = 1e-4
 
@@ -202,11 +204,15 @@ def optimize_model():
 # Function to execute the causal model and estimate treatment effect
 def execute_causal_model(action):
     data = pd.read_csv('data.csv')
+<<<<<<< Updated upstream
     data.dropna(inplace=True)
 
+=======
+>>>>>>> Stashed changes
     filtered_data = data[data['Action'] == action]
 
-    if len(filtered_data) < 8:
+    if len(filtered_data) < 20:
+        print(f"Not enough data to estimate causal effect for action {action}")
         return None
 
     causal_model = CausalModel(
@@ -224,6 +230,12 @@ def execute_causal_model(action):
     except np.linalg.LinAlgError:
         print("LinAlgError: SVD did not converge. Setting effect to None.")
         treatment_effect = None
+<<<<<<< Updated upstream
+=======
+    except ValueError as e:
+        print(f"ValueError: {e}. Setting effect to None.")
+        treatment_effect = None
+>>>>>>> Stashed changes
 
     return treatment_effect
 
@@ -235,7 +247,31 @@ else:
 
 start_time = time.time()
 
+<<<<<<< Updated upstream
 # Main training loop
+=======
+# Variabile per tracciare il numero di timesteps dall'ultimo aggiornamento del modello causale
+timesteps_since_last_update = 0
+
+# Buffer per gli effetti del trattamento calcolati
+treatment_effects_cache = {}
+
+def parallel_execute_causal_model(action):
+    return action, execute_causal_model(action)
+
+def update_causal_model():
+    data = pd.read_csv('data.csv')
+    data.dropna(inplace=True)
+
+    # Parallelizza l'aggiornamento del modello causale per ogni azione
+    results = Parallel(n_jobs=-1)(delayed(parallel_execute_causal_model)(action) for action in range(env.action_space.n))
+    for action, effect in results:
+        print(f"Action: {action}, new effect: {effect}")
+        treatment_effects_cache[action] = effect
+
+
+# Ciclo principale di addestramento
+>>>>>>> Stashed changes
 for i_episode in range(num_episodes):
     if total_timesteps >= max_timesteps:
         break
@@ -245,18 +281,22 @@ for i_episode in range(num_episodes):
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
 
+<<<<<<< Updated upstream
     # Execute causal model for each action
     treatment_effects = {}
     for action in range(env.action_space.n):
         treatment_effects[action] = execute_causal_model(action)
 
+=======
+>>>>>>> Stashed changes
     for t in count():
-        action = select_action(state, treatment_effects)
+        action = select_action(state, treatment_effects_cache)
         observation, reward, terminated, truncated, _ = env.step(action.item())
         reward = torch.tensor([reward], device=device)
         done = terminated or truncated
 
         total_timesteps += 1
+        timesteps_since_last_update += 1
 
         if total_timesteps >= max_timesteps:
             done = True
@@ -267,6 +307,7 @@ for i_episode in range(num_episodes):
             next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
 
         flat_list = [num for sublist in state.tolist() for num in sublist]
+<<<<<<< Updated upstream
 
         fixed_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in flat_list]
         fixed_new_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in observation.tolist()]
@@ -302,10 +343,50 @@ for i_episode in range(num_episodes):
                                         'New_bottle_distance_to_filler_value': fixed_new_state[12],
                                         }, index=[0])])
         
+=======
+        fixed_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in flat_list]
+        fixed_new_state = [round(num, 3) if isinstance(num, (int, float)) else num for num in observation.tolist()]
+
+        # Store experience in the dataframe
+        new_data_row = {'Actual_input_valve_status': fixed_state[0], 
+                        'Actual_input_valve_mode': fixed_state[1], 
+                        'Actual_tank_level_value': fixed_state[2],  
+                        'Actual_tank_level_min': fixed_state[3], 
+                        'Actual_tank_level_max': fixed_state[4], 
+                        'Actual_tank_output_valve_status': fixed_state[5], 
+                        'Actual_tank_output_valve_mode': fixed_state[6], 
+                        'Actual_tank_output_flow_value': fixed_state[7], 
+                        'Actual_belt_engine_status': fixed_state[8], 
+                        'Actual_belt_engine_mode': fixed_state[9], 
+                        'Actual_bottle_level_value': fixed_state[10],
+                        'Actual_bottle_level_max': fixed_state[11], 
+                        'Actual_bottle_distance_to_filler_value': fixed_state[12], 
+                        'Action': action.item(),
+                        'Reward': reward.item(),
+                        'New_input_valve_status': fixed_new_state[0], 
+                        'New_input_valve_mode': fixed_new_state[1], 
+                        'New_tank_level_value': fixed_new_state[2],  
+                        'New_tank_level_min': fixed_new_state[3], 
+                        'New_tank_level_max': fixed_new_state[4], 
+                        'New_tank_output_valve_status': fixed_new_state[5], 
+                        'New_tank_output_valve_mode': fixed_new_state[6], 
+                        'New_tank_output_flow_value': fixed_new_state[7], 
+                        'New_belt_engine_status': fixed_new_state[8], 
+                        'New_belt_engine_mode': fixed_new_state[9], 
+                        'New_bottle_level_value': fixed_new_state[10], 
+                        'New_bottle_level_max': fixed_new_state[11], 
+                        'New_bottle_distance_to_filler_value': fixed_new_state[12]}
+        
+        df = pd.concat([df, pd.DataFrame(new_data_row, index=[0])])
+>>>>>>> Stashed changes
         df.to_csv('data.csv', index=False)
 
-        memory.push(state, action, next_state, reward)
+        # Se abbiamo raggiunto ?? timesteps, aggiorna il modello causale
+        if timesteps_since_last_update >= 10:
+            update_causal_model()
+            timesteps_since_last_update = 0  # Resetta il contatore
 
+        memory.push(state, action, next_state, reward)
         state = next_state
 
         optimize_model()
@@ -321,13 +402,15 @@ for i_episode in range(num_episodes):
             plot_durations()    
             break
 
-end_time = time.time()
-training_time = end_time - start_time
-
+# Salva il modello addestrato
 torch.save(policy_net.state_dict(), 'DQN_causal_2.pth')
 
+# Mostra la durata dell'addestramento
+end_time = time.time()
+training_time = end_time - start_time
 print(f'Training complete in {training_time:.2f} seconds')
 print(f'Total episodes: {i_episode}')
+
 plot_durations(show_result=True)
 plt.savefig('/src/result_duration_plot_DQN2.png')
 plt.ioff()

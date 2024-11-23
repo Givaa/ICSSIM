@@ -89,3 +89,39 @@ a2c - new meta 10000
 |    value_loss         | 4.24     |
 ------------------------------------
 
+DQN - 25000
+----------------------------------
+| rollout/            |          |
+|    ep_len_mean      | 1.9      |
+|    ep_rew_mean      | 8.98     |
+|    exploration_rate | 0.05     |
+| time/               |          |
+|    episodes         | 15336    |
+|    fps              | 0        |
+|    time_elapsed     | 570815   |
+|    total_timesteps  | 25000    |
+| train/              |          |
+|    learning_rate    | 0.0001   |
+|    loss             | 0.541    |
+|    n_updates        | 6224     |
+----------------------------------
+
+A2C - 25000
+
+------------------------------------
+| rollout/              |          |
+|    ep_len_mean        | 2.79     |
+|    ep_rew_mean        | 8.65     |
+| time/                 |          |
+|    fps                | 0        |
+|    iterations         | 5000     |
+|    time_elapsed       | 403856   |
+|    total_timesteps    | 25000    |
+| train/                |          |
+|    entropy_loss       | -1.81    |
+|    explained_variance | -0.024   |
+|    learning_rate      | 0.0007   |
+|    n_updates          | 4999     |
+|    policy_loss        | -0.0313  |
+|    value_loss         | 0.0168   |
+------------------------------------

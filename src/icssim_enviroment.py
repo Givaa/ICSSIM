@@ -34,7 +34,7 @@ class IcssimEnviroment(gym.Env):
             TAG.TAG_TANK_LEVEL_MIN,
             TAG.TAG_TANK_LEVEL_MAX,
             TAG.TAG_TANK_OUTPUT_VALVE_STATUS,
-            TAG.TAG_TANK_INPUT_VALVE_MODE,
+            TAG.TAG_TANK_OUTPUT_VALVE_MODE,
             TAG.TAG_TANK_OUTPUT_FLOW_VALUE,
             TAG.TAG_CONVEYOR_BELT_ENGINE_STATUS,
             TAG.TAG_CONVEYOR_BELT_ENGINE_MODE,
@@ -154,13 +154,13 @@ class IcssimEnviroment(gym.Env):
                 process.communicate()
             # reward = reward - 0
         elif action == 9:
-            rand3 = random.randint(0, 4)
+            rand3 = random.randint(7, 9)
             self.secondPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_BOTTLE_LEVEL_MAX)['id']), self.modbus.encode(rand3))
             # reward = reward + 0 if livello_max_bottiglia != rand3 else reward - 1
             print(f"Capacità massima della bottiglia impostata a: {rand3}")
         elif action == 10: # Regolazione dei valori di massimo e di minimo in modo casuale
             rand1 = random.randint(0, 5)
-            rand2 = random.randint(5, 10)
+            rand2 = random.randint(5, 8)
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_MIN)['id']), self.modbus.encode(rand1))
             self.firstPLC.write_multiple_registers(self.modbus.get_registers(TAG.TAG_LIST.get(TAG.TAG_TANK_LEVEL_MAX)['id']), self.modbus.encode(rand2))
             # reward = reward + 1 if livello_serbatoio_min != rand1 and livello_serbatoio_max != rand2 else reward - 1
